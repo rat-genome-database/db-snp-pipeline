@@ -1,0 +1,17 @@
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+
+<beans>
+	<bean id="loader" class="edu.mcw.rgd.pipelines.DbSnpLoader">
+        <property name="dao" ref="dao" />
+	</bean>
+	
+    <bean id="dao" class="edu.mcw.rgd.pipelines.DbSnpDao">
+        <property name="tableName" value="DB_SNP" />
+        <property name="batchSize" value="5000" />
+    </bean>
+
+    <bean id="gff3Creator" class="edu.mcw.rgd.pipelines.DbSnpGff3Creator">
+        <property name="version" value="DbSnp Gff3 Creator ver 2.0, Jan 15, 2016" />
+    </bean>
+</beans>
