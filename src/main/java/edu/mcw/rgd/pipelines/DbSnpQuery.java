@@ -7,12 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
- * Created by IntelliJ IDEA. <br>
- * User: mtutaj <br>
- * Date: 9/27/11 <br>
- * Time: 11:57 AM <br>
- * To change this template use File | Settings | File Templates.
- * <p/>
+ * @author mtutaj
+ * @since 9/27/11
  * helper class to facilitate sql queries against DB_SNP table
  */
 public class DbSnpQuery extends MappingSqlQuery {

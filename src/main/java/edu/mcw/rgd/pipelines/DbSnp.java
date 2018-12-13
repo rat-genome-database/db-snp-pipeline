@@ -8,11 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by IntelliJ IDEA. <br>
- * User: mtutaj <br>
- * Date: 9/27/11 <br>
- * Time: 11:53 AM <br>
- * <p/>
+ * @author mtutaj
+ * @since 9/27/11
  * represents a row from DB_SNP table
  */
 public class DbSnp {

@@ -11,11 +11,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Created by IntelliJ IDEA. <br>
- * User: mtutaj <br>
- * Date: 9/27/11 <br>
- * Time: 1:25 PM <br>
- * <p/>
+ * @author mtutaj
+ * @since 9/27/11
  * all database access code lands here
  */
 public class DbSnpDao extends AbstractDAO {

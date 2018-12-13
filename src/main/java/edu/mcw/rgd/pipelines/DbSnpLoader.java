@@ -14,9 +14,8 @@ import java.sql.ResultSet;
 import java.util.*;
 
 /**
- * @author mtutaj <br>
- * Date: 9/27/11 <br>
- * <p>
+ * @author mtutaj
+ * @since 9/27/11
  * load manager
  */
 public class DbSnpLoader {
@@ -45,7 +44,6 @@ public class DbSnpLoader {
         String dbSnpTableName = "DB_SNP";
         boolean upConvert = false;
         boolean noDumpFile = false;
-        boolean loadAlleles = false;
         boolean withClinicalSignificance = false;
 
         // parse cmd line for args
@@ -74,9 +72,6 @@ public class DbSnpLoader {
                     break;
                 case "-no_dump_file":
                     noDumpFile = true;
-                    break;
-                case "-load_alleles":
-                    loadAlleles = true;
                     break;
                 case "-with_clinical_significance":
                     withClinicalSignificance = true;
@@ -114,10 +109,6 @@ public class DbSnpLoader {
         }
         else if( upConvert ) {
             loader.dao.upConvert(build, 17, 13);
-            result = "OK";
-        }
-        else if( loadAlleles ) {
-            DbSnpAlleleLoader aloader = new DbSnpAlleleLoader();
             result = "OK";
         }
         else {
