@@ -1,6 +1,7 @@
 package edu.mcw.rgd.pipelines;
 
 import edu.mcw.rgd.dao.AbstractDAO;
+import edu.mcw.rgd.dao.impl.MapDAO;
 import edu.mcw.rgd.process.Utils;
 import org.springframework.jdbc.object.BatchSqlUpdate;
 
@@ -303,5 +304,10 @@ public class DbSnpDao extends AbstractDAO {
 
     public int getBatchSize() {
         return batchSize;
+    }
+
+    public java.util.Map<String,Integer> getChromosomeSizes(int mapKey) throws Exception {
+        MapDAO dao = new MapDAO();
+        return dao.getChromosomeSizes(mapKey);
     }
 }

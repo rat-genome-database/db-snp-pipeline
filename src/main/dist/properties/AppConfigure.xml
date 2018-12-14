@@ -1,7 +1,7 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 <beans>
 	<bean id="loader" class="edu.mcw.rgd.pipelines.DbSnpLoader">
-        <property name="version" value="DbSnp Loader ver 2.0, Dec 13, 2018" />
+        <property name="version" value="DbSnp Loader ver 2.1, Dec 14, 2018" />
         <property name="dao" ref="dao" />
 	</bean>
 	
@@ -12,5 +12,9 @@
 
     <bean id="gff3Creator" class="edu.mcw.rgd.pipelines.DbSnpGff3Creator">
         <property name="version" value="DbSnp Gff3 Creator ver 2.0, Jan 15, 2016" />
+    </bean>
+
+    <bean id="evaLoader" class="edu.mcw.rgd.pipelines.DbSnpEvaLoader">
+        <property name="url" value="https://www.ebi.ac.uk/eva/webservices/rest/v1/segments/#CHR#:#START#-#STOP#/variants?species=#SPECIES#&amp;limit=100000"/>
     </bean>
 </beans>

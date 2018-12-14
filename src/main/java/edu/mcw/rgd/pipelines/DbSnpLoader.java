@@ -1,8 +1,10 @@
 package edu.mcw.rgd.pipelines;
 
+import edu.mcw.rgd.datamodel.*;
 import edu.mcw.rgd.process.FastaParser;
 import edu.mcw.rgd.process.FileDownloader;
 import edu.mcw.rgd.process.Utils;
+import edu.mcw.rgd.process.mapping.MapManager;
 import nu.xom.*;
 import org.apache.commons.logging.*;
 import org.springframework.beans.factory.xml.XmlBeanFactory;
@@ -12,6 +14,7 @@ import edu.mcw.rgd.xml.*;
 import java.io.*;
 import java.sql.ResultSet;
 import java.util.*;
+import java.util.Map;
 
 /**
  * @author mtutaj
@@ -21,6 +24,7 @@ import java.util.*;
 public class DbSnpLoader {
 
     protected final Log logger = LogFactory.getLog("dbsnp");
+    private String version;
 
     DbSnpDao dao;
     FileDownloader downloader = new FileDownloader();
@@ -79,6 +83,7 @@ public class DbSnpLoader {
                 case "-table":
                     dbSnpTableName = args[++argp];
                     break;
+
             }
         }
 
@@ -114,7 +119,15 @@ public class DbSnpLoader {
         else {
             String dumpFile = noDumpFile ? null : "data/load.log";
             result = "OK";
-            loader.run(dataDir, build, mapKey, groupLabel, dumpFile, withClinicalSignificance);
+
+            MapManager mm = MapManager.getInstance();
+            edu.mcw.rgd.datamodel.Map map = mm.getMap(mapKey);
+            if( map.getSpeciesTypeKey()!=SpeciesType.HUMAN ) {
+                DbSnpEvaLoader evaLoader=(DbSnpEvaLoader) (bf.getBean("evaLoader"));
+                evaLoader.run(dataDir, build, mapKey, groupLabel, dumpFile);
+            } else {
+                loader.run(dataDir, build, mapKey, groupLabel, dumpFile, withClinicalSignificance);
+            }
         }
         System.out.println(result);
     }
@@ -757,5 +770,13 @@ public class DbSnpLoader {
             }
             return null;
         }
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 }
