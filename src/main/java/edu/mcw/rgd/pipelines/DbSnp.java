@@ -20,14 +20,12 @@ public class DbSnp {
     private String chromosome;
     private int position;
     private String snpClass;
-    private String snpType;
     private String molType;
     private String genotype;
     private Double avgHetroScore;
     private Double stdError;
     private String hetroType;
     private String allele;
-    private Integer orientation;
     private Double mafFrequency;
     private Integer mafSampleSize;
     private String mafAllele;
@@ -51,14 +49,12 @@ public class DbSnp {
             Utils.stringsAreEqual(this.chromosome, o.chromosome) &&
             this.position==o.position &&
             Utils.stringsAreEqual(this.snpClass, o.snpClass) &&
-            Utils.stringsAreEqual(this.snpType, o.snpType) &&
             Utils.stringsAreEqual(this.molType, o.molType) &&
             Utils.stringsAreEqual(this.genotype, o.genotype) &&
             doublesAreEqual(this.avgHetroScore, o.avgHetroScore, 2)  &&
             doublesAreEqual(this.stdError, o.stdError, 4) &&
             Utils.stringsAreEqual(this.hetroType, o.hetroType) &&
             Utils.stringsAreEqual(this.allele, o.allele) &&
-            Utils.intsAreEqual(this.orientation, o.orientation) &&
             doublesAreEqual(this.mafFrequency, o.mafFrequency, 4) &&
             Utils.intsAreEqual(this.mafSampleSize, o.mafSampleSize) &&
             Utils.stringsAreEqual(this.mafAllele, o.mafAllele) &&
@@ -139,14 +135,6 @@ public class DbSnp {
         this.snpClass = snpClass;
     }
 
-    public String getSnpType() {
-        return snpType;
-    }
-
-    public void setSnpType(String snpType) {
-        this.snpType = snpType;
-    }
-
     public String getMolType() {
         return molType;
     }
@@ -193,14 +181,6 @@ public class DbSnp {
 
     public void setAllele(String allele) {
         this.allele = allele;
-    }
-
-    public Integer getOrientation() {
-        return orientation;
-    }
-
-    public void setOrientation(Integer orientation) {
-        this.orientation = orientation;
     }
 
     public Double getMafFrequency() {

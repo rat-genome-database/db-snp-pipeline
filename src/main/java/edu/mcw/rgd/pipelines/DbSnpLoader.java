@@ -381,7 +381,6 @@ public class DbSnpLoader {
         String genomeBuild;
         String rsId;
         String snpClass; // "snp", ...
-        String snpType; // "notwithdrawn", ...
         String molType; // "genomic", ...
         String genotype; // "true", ...
         Double het;  // avg heterozygosity score
@@ -518,12 +517,10 @@ public class DbSnpLoader {
             dbSnp.setSource(source);
             dbSnp.setStdError(stdErr);
             dbSnp.setAllele(allele);
-            dbSnp.setOrientation(1);
             dbSnp.setMafFrequency(mafFreq);
             dbSnp.setMafSampleSize(mafSampleSize);
             dbSnp.setMafAllele(mafAllele);
             dbSnp.setSnpClass(snpClass);
-            dbSnp.setSnpType(snpType);
             dbSnp.setMolType(molType);
             dbSnp.setGenotype(genotype);
             dbSnp.setHetroType(hetType);
@@ -547,13 +544,11 @@ public class DbSnpLoader {
                         het + '\t' +
                         stdErr + '\t' +
                         snpClass + '\t' +
-                        snpType + '\t' +
                         molType + '\t' +
                         genotype + '\t' +
                         dbSnpBuild + '\t' +
                         genomeBuild + '\t' +
                         allele + '\t' +
-                        1 + '\t' +
                         mafFreq + '\t' +
                         mafSampleSize + '\t' +
                         mafAllele + '\t' +
@@ -587,7 +582,6 @@ public class DbSnpLoader {
                 }
 
                 snpClass = element.getAttributeValue("snpClass");
-                snpType = element.getAttributeValue("snpType");
                 molType = element.getAttributeValue("molType");
                 genotype = element.getAttributeValue("genotype");
 

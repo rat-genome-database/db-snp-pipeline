@@ -1,10 +1,12 @@
 package edu.mcw.rgd.pipelines;
 
 import edu.mcw.rgd.dao.AbstractDAO;
+import edu.mcw.rgd.dao.DataSourceFactory;
 import edu.mcw.rgd.dao.impl.MapDAO;
 import edu.mcw.rgd.process.Utils;
 import org.springframework.jdbc.object.BatchSqlUpdate;
 
+import javax.sql.DataSource;
 import java.sql.*;
 import java.text.NumberFormat;
 import java.util.List;
@@ -28,6 +30,11 @@ public class DbSnpDao extends AbstractDAO {
 
     static long committedDbSnpBatches = 0;
     static long committedDbSnpBatchesElapsedTime = 0;
+
+    //
+    public DataSource getDataSource() throws Exception {
+        return DataSourceFactory.getInstance().getDataSource("DbSnp");
+    }
 
     String getStats() {
         return "  dbsnp=" + _fmtThousands.format(dbSnpCount)
@@ -88,17 +95,17 @@ public class DbSnpDao extends AbstractDAO {
         BatchSqlUpdate su = new BatchSqlUpdate(this.getDataSource(),
             "INSERT INTO "+tableName+" (chromosome, position, avg_hetro_score, std_error, "+
                     "snp_name, source, map_key, allele, "+
-                    "orientation, maf_frequency, maf_sample_size, het_type, "+
-                    "snp_class, snp_type, mol_type, genotype, "+
+                    "maf_frequency, maf_sample_size, het_type, "+
+                    "snp_class, mol_type, genotype, "+
                     "map_loc_count, function_class, maf_allele, ancestral_allele, "+
                     "clinical_significance, ref_allele, db_snp_id) "+
-                    "SELECT ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,?,?, ?,?,DB_SNP_SEQ.NEXTVAL FROM dual "+
+                    "SELECT ?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,DB_SNP_SEQ.NEXTVAL FROM dual "+
                     "WHERE NOT EXISTS(SELECT 1 FROM "+tableName+" WHERE chromosome=? AND position=? AND snp_name=? "+
                 "AND source=? AND map_key=? AND allele=?)",
             new int[] {Types.VARCHAR, Types.INTEGER, Types.DOUBLE, Types.DOUBLE,
                     Types.VARCHAR, Types.VARCHAR, Types.INTEGER, Types.VARCHAR,
-                    Types.INTEGER, Types.DOUBLE, Types.INTEGER, Types.VARCHAR,
-                    Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
+                    Types.DOUBLE, Types.INTEGER, Types.VARCHAR,
+                    Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
                     Types.INTEGER, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
                     Types.VARCHAR, Types.VARCHAR,
                     Types.VARCHAR, Types.INTEGER, Types.VARCHAR,
@@ -109,15 +116,14 @@ public class DbSnpDao extends AbstractDAO {
         su.compile();
 
         for( DbSnp snp: dbSnps ) {
-            su.update(new Object[]{snp.getChromosome(), snp.getPosition(), snp.getAvgHetroScore(), snp.getStdError(),
+            su.update(snp.getChromosome(), snp.getPosition(), snp.getAvgHetroScore(), snp.getStdError(),
                     snp.getSnpName(), snp.getSource(), snp.getMapKey(), snp.getAllele(),
-                    snp.getOrientation(), snp.getMafFrequency(), snp.getMafSampleSize(), snp.getHetroType(),
-                    snp.getSnpClass(), snp.getSnpType(), snp.getMolType(), snp.getGenotype(),
+                    snp.getMafFrequency(), snp.getMafSampleSize(), snp.getHetroType(),
+                    snp.getSnpClass(), snp.getMolType(), snp.getGenotype(),
                     snp.getMapLocCount(), snp.getFunctionClass(), snp.getMafAllele(), snp.getAncestralAllele(),
                     snp.getClinicalSignificance(), snp.getRefAllele(),
                     snp.getChromosome(), snp.getPosition(), snp.getSnpName(),
-                    snp.getSource(), snp.getMapKey(), snp.getAllele()
-        });
+                    snp.getSource(), snp.getMapKey(), snp.getAllele());
         }
 
         return executeBatch(su);
@@ -141,8 +147,11 @@ public class DbSnpDao extends AbstractDAO {
         su.compile();
 
         for( DbSnp snp: dbSnps ) {
+            if( snp.getHgvs()==null ) {
+                continue;
+            }
             for( String hgvsName: snp.getHgvs() ) {
-                su.update(new Object[]{snp.getSnpName(), hgvsName, snp.getSnpName(), hgvsName});
+                su.update(snp.getSnpName(), hgvsName, snp.getSnpName(), hgvsName);
             }
         }
 
@@ -167,10 +176,13 @@ public class DbSnpDao extends AbstractDAO {
         su.compile();
 
         for( DbSnp snp: dbSnps ) {
+            if( snp.getMergeHistory()==null ) {
+                continue;
+            }
             for( Map.Entry<String, Integer> entry: snp.getMergeHistory().entrySet() ) {
                 String oldSnpName = entry.getKey();
                 Integer buildId = entry.getValue();
-                su.update(new Object[]{snp.getSnpName(), oldSnpName, buildId, snp.getSnpName(), oldSnpName});
+                su.update(snp.getSnpName(), oldSnpName, buildId, snp.getSnpName(), oldSnpName);
             }
         }
 

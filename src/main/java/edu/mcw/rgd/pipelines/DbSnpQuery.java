@@ -28,7 +28,6 @@ public class DbSnpQuery extends MappingSqlQuery {
         rec.setMafFrequency(rs.getDouble("maf_frequency"));
         rec.setMafSampleSize(rs.getInt("maf_sample_size"));
         rec.setMapKey(rs.getInt("map_key"));
-        rec.setOrientation(rs.getInt("orientation"));
         rec.setPosition(rs.getInt("position"));
         rec.setSnpName(rs.getString("snp_name"));
         rec.setSource(rs.getString("source"));

@@ -1,7 +1,7 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 <beans>
 	<bean id="loader" class="edu.mcw.rgd.pipelines.DbSnpLoader">
-        <property name="version" value="DbSnp Loader ver 2.1, Dec 14, 2018" />
+        <property name="version" value="DbSnp Loader ver 2.2, Jan 14, 2019" />
         <property name="dao" ref="dao" />
 	</bean>
 	
