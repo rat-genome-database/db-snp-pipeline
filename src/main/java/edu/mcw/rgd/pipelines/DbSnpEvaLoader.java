@@ -9,6 +9,8 @@ import com.github.cliftonlabs.json_simple.JsonObject;
 import com.github.cliftonlabs.json_simple.Jsoner;
 import edu.mcw.rgd.process.FileDownloader;
 import edu.mcw.rgd.process.Utils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -24,7 +26,7 @@ public class DbSnpEvaLoader {
 
     private String url;
     private DbSnpDao dao = new DbSnpDao();
-
+    protected final Log logger = LogFactory.getLog("dbsnp");
     BufferedWriter createGZip(String fName) throws IOException {
         return new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(fName))));
 
@@ -63,7 +65,7 @@ public class DbSnpEvaLoader {
             String fname = f.getName();
             if (fname.contains("DbSnp149")) {
                 String absFileName = f.getAbsolutePath();
-                System.out.println(absFileName);
+                logger.info(absFileName);
 
                 // fix files
                 BufferedReader in = Utils.openReader(absFileName);
@@ -128,7 +130,7 @@ public class DbSnpEvaLoader {
             int fileNr = 0;
             int chrLen = chromosomeSizes.get(chr)+100000;
             String msg = "processing chromosome "+chr+" of size "+Utils.formatThousands(chrLen)+"\n";
-            System.out.print(msg);
+            logger.info(msg);
             dump.write(msg);
             long totalVariantsWritten = 0l;
             String chrFileName = outFileNamePattern.replace("#CHR#", chr);
@@ -136,7 +138,7 @@ public class DbSnpEvaLoader {
             File chrFile = new File(chrFileName);
             if( chrFile.exists() ) {
                 msg = chrFileName+" already exists";
-                System.out.println(msg);
+                logger.info(msg);
                 dump.write(msg+"\n");
                 return;
             }
@@ -157,7 +159,7 @@ public class DbSnpEvaLoader {
             int variantsWritten = 0;
             for( int i=1; i<chrLen; i+=CHUNK_SIZE ) {
                 String url = urlTemplate.replace("#START#", Integer.toString(i)).replace("#STOP#", Integer.toString(i+CHUNK_SIZE-1));
-                System.out.println(url);
+                logger.info(url);
                 fd.setExternalFile(url);
                 fd.setLocalFile("/tmp/z/" +chr+"/"+ (++fileNr) + ".json.gz");
                 fd.setUseCompression(true);
@@ -173,14 +175,14 @@ public class DbSnpEvaLoader {
                     int numResults = ((BigDecimal) response.get("numResults")).intValueExact();
                     int numTotalResults = ((BigDecimal) response.get("numTotalResults")).intValueExact();
                     if( numResults<numTotalResults ) {
-                        System.out.println("*** serious problem: numResults<numTotalResults");
+                        logger.info("*** serious problem: numResults<numTotalResults");
                         dump.write("*** serious problem: numResults<numTotalResults\n");
                     }
 
                     Double progressInPercent = (100.0*i)/(chrLen);
                     String progress = ",  "+String.format("%.1f%%", progressInPercent);
                     msg = "  chr"+chr+":"+i+"-"+(i+CHUNK_SIZE-1)+"   variants:"+numResults+" chr total:"+variantsWritten+progress+"\n";
-                    System.out.print(msg);
+                    logger.info(msg);
                     dump.write(msg);
 
                     if( numResults==0 ) {
@@ -212,7 +214,7 @@ public class DbSnpEvaLoader {
             msg += "chr"+chr+", variants written: "+Utils.formatThousands(variantsWritten)
                     +",  total variants written: "+Utils.formatThousands(totalVariantsWritten)+"\n";
             msg += "============\n\n";
-            System.out.print(msg);
+                logger.info(msg);
             dump.write(msg);
             dump.flush();
 
@@ -224,7 +226,7 @@ public class DbSnpEvaLoader {
 
             // delete all temporary files
             File dirZ = new File("/tmp/z/"+chr);
-                System.out.print(dirZ);
+
             for( File file: dirZ.listFiles() ) {
                 if (!file.isDirectory())
                     file.delete();
@@ -434,23 +436,23 @@ public class DbSnpEvaLoader {
 
         // insert remaining snps
         save(null, dump);
-        System.out.println("DAO: total rows inserted: "+rowsInserted);
+        logger.info("DAO: total rows inserted: "+rowsInserted);
         if( snpsWithoutAccession>0 ) {
-            System.out.println("### WARN: skipped snps without accession: " + snpsWithoutAccession);
+            logger.info("### WARN: skipped snps without accession: " + snpsWithoutAccession);
         }
 
         // dump unknown fields
-        System.out.println();
-        System.out.println("unknown fields: ");
+        logger.info("\n");
+        logger.info("unknown fields: ");
         for( Map.Entry<String,Integer> entry: unknownFields.entrySet() ) {
-            System.out.println("   "+entry.getKey()+" : "+entry.getValue());
+            logger.info("   "+entry.getKey()+" : "+entry.getValue());
         }
 
         // dump snp lengthd
-        System.out.println();
-        System.out.println("snp lengths distribution: ");
+        logger.info("\n");
+        logger.info("snp lengths distribution: ");
         for( Map.Entry<Integer,Integer> entry: snpLengths.entrySet() ) {
-            System.out.println("   "+entry.getKey()+" : "+entry.getValue());
+            logger.info("   "+entry.getKey()+" : "+entry.getValue());
         }
         System.exit(-1);
     }
@@ -459,7 +461,7 @@ public class DbSnpEvaLoader {
 
         if( dbSnp!=null ) {
             if( dbSnp.getSnpName()==null ) {
-                System.out.println("## no RS id for "+dbSnp.getSnpClass()+" at CHR"+dbSnp.getChromosome()+":"+dbSnp.getPosition());
+                logger.info("## no RS id for "+dbSnp.getSnpClass()+" at CHR"+dbSnp.getChromosome()+":"+dbSnp.getPosition());
                 return false;
             }
 
@@ -483,7 +485,7 @@ public class DbSnpEvaLoader {
             rowsInserted += dbSnpList.size();
             dao.insert(dbSnpList);
             dbSnpList.clear();
-            System.out.println("DAO: rows inserted "+rowsInserted);
+            logger.info("DAO: rows inserted "+rowsInserted);
         }
         return true;
     }
