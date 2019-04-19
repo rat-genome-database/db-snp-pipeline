@@ -43,12 +43,14 @@ public class DbSnpEvaLoader {
 
         List<String> chrFiles = downloadAllChromosomes(dir, source, groupLabel, mapKey, dump);
 
-        dump.close();
+
 
         // process files
         for( String chrFile: chrFiles ) {
             processFile(chrFile, mapKey, dump);
         }
+
+        dump.close();
     }
 
     void fixAllFilesInDir(String dirName) throws Exception {
@@ -107,27 +109,28 @@ public class DbSnpEvaLoader {
 
     public List<String> downloadAllChromosomes(String dir, String source, String groupLabel, int mapKey, BufferedWriter dump) throws Exception {
 
-        List<String> chrFiles = new ArrayList<>();
+        List<String> chrFiles = new ArrayList<String>();
 
         String outFileNamePattern = dir + source + "_" +groupLabel + "_chr#CHR#.json";
         //String outFileNamePattern = dir + source + "_" +groupLabel + "_chr#CHR#.json.gz";
 
         FileDownloader fd = new FileDownloader();
 
-        long totalVariantsWritten = 0l;
+
 
         // download all files from EVA, by chromosome, in chunks
-        final int CHUNK_SIZE = 250000;
+        final int CHUNK_SIZE = 1000000;
         java.util.Map<String,Integer> chromosomeSizes = dao.getChromosomeSizes(mapKey);
         List<String> chromosomes = new ArrayList<>(chromosomeSizes.keySet());
         Collections.shuffle(chromosomes);
-        for( String chr: chromosomes ) {
+        chromosomes.parallelStream().forEach(chr -> {
+            try{
             int fileNr = 0;
             int chrLen = chromosomeSizes.get(chr)+100000;
             String msg = "processing chromosome "+chr+" of size "+Utils.formatThousands(chrLen)+"\n";
             System.out.print(msg);
             dump.write(msg);
-
+            long totalVariantsWritten = 0l;
             String chrFileName = outFileNamePattern.replace("#CHR#", chr);
             chrFiles.add(chrFileName);
             File chrFile = new File(chrFileName);
@@ -135,10 +138,10 @@ public class DbSnpEvaLoader {
                 msg = chrFileName+" already exists";
                 System.out.println(msg);
                 dump.write(msg+"\n");
-                continue;
+                return;
             }
             //BufferedWriter out = createGZip(chrFileName);
-            BufferedWriter out = new BufferedWriter(new FileWriter(chrFileName));
+            BufferedWriter out = new BufferedWriter(new FileWriter(new File(chrFileName)));
 
             JsonFactory jf = new JsonFactory();
             JsonGenerator jsonGenerator = jf.createGenerator(out);
@@ -154,11 +157,12 @@ public class DbSnpEvaLoader {
             int variantsWritten = 0;
             for( int i=1; i<chrLen; i+=CHUNK_SIZE ) {
                 String url = urlTemplate.replace("#START#", Integer.toString(i)).replace("#STOP#", Integer.toString(i+CHUNK_SIZE-1));
+                System.out.println(url);
                 fd.setExternalFile(url);
-                fd.setLocalFile("/tmp/z/" + (++fileNr) + ".json.gz");
+                fd.setLocalFile("/tmp/z/" +chr+"/"+ (++fileNr) + ".json.gz");
                 fd.setUseCompression(true);
-                String localFile = fd.downloadNew();
 
+                String localFile = fd.downloadNew();
 
 
                 BufferedReader jsonRaw = Utils.openReader(localFile);
@@ -219,12 +223,13 @@ public class DbSnpEvaLoader {
             out.close();
 
             // delete all temporary files
-            File dirZ = new File("/tmp/z");
+            File dirZ = new File("/tmp/z/"+chr);
+                System.out.print(dirZ);
             for( File file: dirZ.listFiles() ) {
                 if (!file.isDirectory())
                     file.delete();
             }
-        }
+        }catch(Exception e){e.printStackTrace();} } );
         return chrFiles;
     }
 
