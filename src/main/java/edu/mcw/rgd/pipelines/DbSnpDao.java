@@ -266,6 +266,7 @@ public class DbSnpDao extends AbstractDAO {
                 result.add(dbSnp);
             }
             System.out.println("Size " + result.size());
+            conn.close();
             return result;
         }
         catch(Exception e) {
