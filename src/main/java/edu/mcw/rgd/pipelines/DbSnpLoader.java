@@ -114,15 +114,13 @@ public class DbSnpLoader {
                         System.out.println("Processing chromosome "+ chr);
                         Set<DbSnp> result = loader.dao.getDbSnp(build, mapKey, chr);
                         List<DbSnp> out = new ArrayList<>();
-                        System.out.println("Updating chromosome "+ chr);
                         int count = 0;
                         for (DbSnp dbSnp : result) {
                             count++;
                             String refNuc = loader.getRefNucleotide(dbSnp.getChromosome(), dbSnp.getPosition(), dbSnp.getMapKey());
                             dbSnp.setRefAllele(refNuc);
                             out.add(dbSnp);
-                            if(count%1000 == 0 ) {
-                                System.out.println("Updating chromosome "+ count);
+                            if(count%100000 == 0 ) {
                                 loader.dao.updateDbSnp(out, build);
                                 out = new ArrayList<>();
                                 System.out.println("Update complete for " + count);
