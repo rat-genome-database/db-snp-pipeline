@@ -26,7 +26,7 @@ public class DbSnpLoader {
     protected final Log logger = LogFactory.getLog("dbsnp");
     private String version;
 
-    DbSnpDao dao;
+    DbSnpDao dao = new DbSnpDao();
     FileDownloader downloader = new FileDownloader();
     FastaParser fastaParser = new FastaParser();
     int skippedDbSnpEntries = 0;
@@ -41,6 +41,7 @@ public class DbSnpLoader {
 
         String dataDir = null;
         int mapKey = 0;
+        int refNucUpdate = 0;
         String build = null;
         String groupLabel = null;
         String exportFile = null;
@@ -83,28 +84,65 @@ public class DbSnpLoader {
                 case "-table":
                     dbSnpTableName = args[++argp];
                     break;
+                case "-ref_Nuc_Update":
+                    refNucUpdate = Integer.parseInt(args[++argp]);
+                    break;
 
             }
         }
 
-        // validate cmd line params
-        if( dataDir==null || mapKey==0 || build==null || groupLabel==null) {
-            System.out.println("Usage: java -Dspring.config={db.conf.file} -jar DbSnpLoader.jar -data_dir {data_dir_path} -map_key {map_key_value} -group_label {group_label} -build {build} [-no_dump_file] [-table db_snp_table_name]");
-            System.out.println("  for example:");
-            System.out.println("  java -Dspring.config=../properties/default_db.xml -jar DbSnpLoader.jar -data_dir ./data/dbSnp134 -map_key 17 -group_label GRCh37.p2 -build dbSnp134");
-            return;
-        }
+
 
         // instantiate loader class
 	    XmlBeanFactory bf=new XmlBeanFactory(new FileSystemResource("properties/AppConfigure.xml"));
         DbSnpLoader loader=(DbSnpLoader) (bf.getBean("loader"));
+
 
         // set DB_SNP table name
         if( dbSnpTableName!=null ) {
             loader.dao.setTableName(dbSnpTableName);
             System.out.println("dbSnp table used for import is: "+dbSnpTableName);
         }
+        // validate cmd line params
+        if( dataDir==null || mapKey==0 || build==null || groupLabel==null) {
+            if(mapKey != 0 && build != null && refNucUpdate == 1) {
+                java.util.Map<String, Integer> chromosomeSizes = loader.dao.getChromosomeSizes(mapKey);
+                List<String> chromosomes = new ArrayList<>(chromosomeSizes.keySet());
 
+                for(String chr: chromosomes) {
+                    try {
+                        System.out.println("Processing chromosome "+ chr);
+                        Set<DbSnp> result = loader.dao.getDbSnp(build, mapKey, chr);
+                        List<DbSnp> out = new ArrayList<>();
+                        System.out.println("Updating chromosome "+ chr);
+                        int count = 0;
+                        for (DbSnp dbSnp : result) {
+                            count++;
+                            String refNuc = loader.getRefNucleotide(dbSnp.getChromosome(), dbSnp.getPosition(), dbSnp.getMapKey());
+                            dbSnp.setRefAllele(refNuc);
+                            out.add(dbSnp);
+                            if(count%1000 == 0 ) {
+                                System.out.println("Updating chromosome "+ count);
+                                loader.dao.updateDbSnp(out, build);
+                                out = new ArrayList<>();
+                                System.out.println("Update complete for " + count);
+                            }
+                        }
+                        loader.dao.updateDbSnp(out,build);
+                        loader.dao.delete(build, chr, mapKey);
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+                }
+            }else {
+                System.out.println("Usage: java -Dspring.config={db.conf.file} -jar DbSnpLoader.jar -data_dir {data_dir_path} -map_key {map_key_value} -group_label {group_label} -build {build} [-no_dump_file] [-table db_snp_table_name]");
+                System.out.println("  for example:");
+                System.out.println("  java -Dspring.config=../properties/default_db.xml -jar DbSnpLoader.jar -data_dir ./data/dbSnp134 -map_key 17 -group_label GRCh37.p2 -build dbSnp134");
+            }
+
+
+            return;
+        }
         String result;
         if( exportFile!=null ) {
             result = loader.exportData(build, mapKey, exportFile);
@@ -299,14 +337,14 @@ public class DbSnpLoader {
     }
 
     /// slow (remote) version to get the reference nucleotide
-    String getRefNucleotideFromService(String chr, int pos, int mapKey) throws Exception {
+    public String getRefNucleotideFromService(String chr, int pos, int mapKey) throws Exception {
 
-        downloader.setExternalFile("http://kyle.rgd.mcw.edu/rgdweb/seqretrieve/retrieve.html?mapKey="+mapKey+"&chr="+chr+
+        downloader.setExternalFile("http://pipelines.rgd.mcw.edu/rgdweb/seqretrieve/retrieve.html?mapKey="+mapKey+"&chr="+chr+
                 "&startPos="+pos+"&stopPos="+pos+"&format=text");
-        downloader.setLocalFile("/tmp/"+chr+"."+pos);
-        String localFile = downloader.download();
-        String refNuc = Utils.readFileAsString(localFile);
-        new File(localFile).delete();
+        downloader.setLocalFile(null);
+
+        String refNuc =downloader.download();
+
         return refNuc;
     }
 
