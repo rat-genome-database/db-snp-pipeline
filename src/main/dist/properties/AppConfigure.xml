@@ -15,6 +15,6 @@
     </bean>
 
     <bean id="evaLoader" class="edu.mcw.rgd.pipelines.DbSnpEvaLoader">
-        <property name="url" value="https://www.ebi.ac.uk/eva/webservices/rest/v1/segments/#CHR#:#START#-#STOP#/variants?species=#SPECIES#&amp;limit=100000"/>
+        <property name="url" value="https://www.ebi.ac.uk/eva/webservices/rest/v1/segments/#CHR#:#START#-#STOP#/variants?species=#SPECIES#&amp;limit=10000"/>
     </bean>
 </beans>

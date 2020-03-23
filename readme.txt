@@ -1,3 +1,6 @@
+Mar 23, 2020
+  EVA Parser: updated code to download all variants for rat Rnor6
+
 v. 2.1 Dec 14, 2018
   EVA Parser: implemented code to download all variants for rat into one huge json file
 

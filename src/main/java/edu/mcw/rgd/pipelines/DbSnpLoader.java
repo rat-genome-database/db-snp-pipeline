@@ -301,12 +301,12 @@ public class DbSnpLoader {
     /// slow (remote) version to get the reference nucleotide
     String getRefNucleotideFromService(String chr, int pos, int mapKey) throws Exception {
 
-        downloader.setExternalFile("http://kyle.rgd.mcw.edu/rgdweb/seqretrieve/retrieve.html?mapKey="+mapKey+"&chr="+chr+
+        downloader.setExternalFile("https://pipelines.rgd.mcw.edu/rgdweb/seqretrieve/retrieve.html?mapKey="+mapKey+"&chr="+chr+
                 "&startPos="+pos+"&stopPos="+pos+"&format=text");
-        downloader.setLocalFile("/tmp/"+chr+"."+pos);
-        String localFile = downloader.download();
-        String refNuc = Utils.readFileAsString(localFile);
-        new File(localFile).delete();
+        downloader.setLocalFile(null);
+        String refNuc = downloader.download();
+
+
         return refNuc;
     }
 

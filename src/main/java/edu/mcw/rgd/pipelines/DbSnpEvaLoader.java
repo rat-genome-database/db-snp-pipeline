@@ -117,13 +117,13 @@ public class DbSnpEvaLoader {
         long totalVariantsWritten = 0l;
 
         // download all files from EVA, by chromosome, in chunks
-        final int CHUNK_SIZE = 250000;
+        final int CHUNK_SIZE = 10000;
         java.util.Map<String,Integer> chromosomeSizes = dao.getChromosomeSizes(mapKey);
         List<String> chromosomes = new ArrayList<>(chromosomeSizes.keySet());
         Collections.shuffle(chromosomes);
         for( String chr: chromosomes ) {
             int fileNr = 0;
-            int chrLen = chromosomeSizes.get(chr)+100000;
+            int chrLen = chromosomeSizes.get(chr)+10000;
             String msg = "processing chromosome "+chr+" of size "+Utils.formatThousands(chrLen)+"\n";
             System.out.print(msg);
             dump.write(msg);
@@ -221,7 +221,7 @@ public class DbSnpEvaLoader {
             // delete all temporary files
             File dirZ = new File("/tmp/z");
             for( File file: dirZ.listFiles() ) {
-                if (!file.isDirectory())
+                if (!file.isDirectory() && file.getName().endsWith(".json.gz"))
                     file.delete();
             }
         }
