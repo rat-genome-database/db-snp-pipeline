@@ -9,9 +9,7 @@ import org.springframework.jdbc.object.BatchSqlUpdate;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.text.NumberFormat;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author mtutaj
@@ -236,6 +234,99 @@ public class DbSnpDao extends AbstractDAO {
         }
     }
 
+    public Set<DbSnp> getDbSnp(String source, int mapKey,String chromosome) throws Exception {
+
+        String sql = "SELECT * FROM "+tableName+" WHERE source=? AND map_key=? and chromosome = ? and ref_allele is null";
+        Connection conn = null;
+        try {
+            conn = this.getConnection();
+            PreparedStatement pst = conn.prepareStatement(sql);
+            pst.setString(1, source);
+            pst.setInt(2, mapKey);
+            pst.setString(3,chromosome);
+            ResultSet rs =  pst.executeQuery();
+            Set<DbSnp> result = new TreeSet<>(new Comparator() {
+                @Override
+                public int compare(Object o1, Object o2) {
+                    if(((DbSnp)o1).getSnpName().equals(((DbSnp)o2).getSnpName())) {
+                        if(((DbSnp)o1).getPosition() == (((DbSnp)o2).getPosition())){
+                            return 0;
+                        }else return 1;
+                    } else return 1;
+
+                }
+            });
+            while(rs.next()){
+                DbSnp dbSnp = new DbSnp();
+                dbSnp.setSnpName(rs.getString("SNP_NAME"));
+                dbSnp.setSource(rs.getString("SOURCE"));
+                dbSnp.setMapKey(rs.getInt("MAP_KEY"));
+                dbSnp.setChromosome(rs.getString("CHROMOSOME"));
+                dbSnp.setPosition(rs.getInt("POSITION"));
+                result.add(dbSnp);
+            }
+            System.out.println("Size " + result.size());
+            conn.close();
+            return result;
+        }
+        catch(Exception e) {
+            if( conn!=null ) {
+                try { conn.close(); } catch(Exception ignored) {}
+            }
+            throw e;
+        }
+    }
+    public int updateDbSnp(List<DbSnp> dbSnp,String source) throws Exception {
+
+        BatchSqlUpdate su = new BatchSqlUpdate(this.getDataSource(),
+                "UPDATE "+tableName+" SET ref_allele = ? WHERE source=? AND map_key=? AND snp_name=? and chromosome = ? and position = ?",
+                new int[] {Types.VARCHAR, Types.VARCHAR, Types.INTEGER,
+                        Types.VARCHAR, Types.VARCHAR, Types.INTEGER
+                }
+        );
+        su.setBatchSize(getBatchSize());
+        su.compile();
+
+        for( DbSnp snp: dbSnp ) {
+
+            su.update(new Object[]{snp.getRefAllele(),source, snp.getMapKey(),
+                    snp.getSnpName(), snp.getChromosome(),snp.getPosition()
+            });
+
+        }
+
+        return executeBatch(su);
+
+    }
+    public void delete(String source, String chromosome, int mapKey) throws Exception {
+
+
+        String sql = "Delete from "+tableName+" where ref_allele = allele and map_key = ? and source = ? and chromosome = ?";
+
+        Connection conn = null;
+        try {
+            conn = this.getDataSource().getConnection();
+            conn.setAutoCommit(false);
+
+
+            PreparedStatement pst = conn.prepareStatement(sql);
+            pst.setInt(1, mapKey);
+            pst.setString(2, source);
+            pst.setString(3, chromosome);
+            pst.executeUpdate();
+
+
+
+            conn.commit();
+
+            conn.setAutoCommit(true);
+        }
+        finally {
+            if( conn!=null ) {
+                try { conn.close(); } catch(Exception ignored) {}
+            }
+        }
+    }
     public void upConvert(String source, int mapKey1, int mapKey2) throws Exception {
 
         String sql1 = "SELECT avg_hetro_score, std_error, allele, "+

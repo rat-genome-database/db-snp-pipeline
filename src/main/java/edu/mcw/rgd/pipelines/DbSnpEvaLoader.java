@@ -9,6 +9,8 @@ import com.github.cliftonlabs.json_simple.JsonObject;
 import com.github.cliftonlabs.json_simple.Jsoner;
 import edu.mcw.rgd.process.FileDownloader;
 import edu.mcw.rgd.process.Utils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -24,7 +26,7 @@ public class DbSnpEvaLoader {
 
     private String url;
     private DbSnpDao dao = new DbSnpDao();
-
+    protected final Log logger = LogFactory.getLog("dbsnp");
     BufferedWriter createGZip(String fName) throws IOException {
         return new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(fName))));
 
@@ -43,12 +45,14 @@ public class DbSnpEvaLoader {
 
         List<String> chrFiles = downloadAllChromosomes(dir, source, groupLabel, mapKey, dump);
 
-        dump.close();
+
 
         // process files
         for( String chrFile: chrFiles ) {
             processFile(chrFile, mapKey, dump);
         }
+
+        dump.close();
     }
 
     void fixAllFilesInDir(String dirName) throws Exception {
@@ -61,7 +65,7 @@ public class DbSnpEvaLoader {
             String fname = f.getName();
             if (fname.contains("DbSnp149")) {
                 String absFileName = f.getAbsolutePath();
-                System.out.println(absFileName);
+                logger.info(absFileName);
 
                 // fix files
                 BufferedReader in = Utils.openReader(absFileName);
@@ -107,38 +111,39 @@ public class DbSnpEvaLoader {
 
     public List<String> downloadAllChromosomes(String dir, String source, String groupLabel, int mapKey, BufferedWriter dump) throws Exception {
 
-        List<String> chrFiles = new ArrayList<>();
+        List<String> chrFiles = new ArrayList<String>();
 
         String outFileNamePattern = dir + source + "_" +groupLabel + "_chr#CHR#.json";
         //String outFileNamePattern = dir + source + "_" +groupLabel + "_chr#CHR#.json.gz";
 
         FileDownloader fd = new FileDownloader();
 
-        long totalVariantsWritten = 0l;
+
 
         // download all files from EVA, by chromosome, in chunks
         final int CHUNK_SIZE = 10000;
         java.util.Map<String,Integer> chromosomeSizes = dao.getChromosomeSizes(mapKey);
         List<String> chromosomes = new ArrayList<>(chromosomeSizes.keySet());
         Collections.shuffle(chromosomes);
-        for( String chr: chromosomes ) {
+        chromosomes.parallelStream().forEach(chr -> {
+            try{
             int fileNr = 0;
             int chrLen = chromosomeSizes.get(chr)+10000;
             String msg = "processing chromosome "+chr+" of size "+Utils.formatThousands(chrLen)+"\n";
-            System.out.print(msg);
+            logger.info(msg);
             dump.write(msg);
-
+            long totalVariantsWritten = 0l;
             String chrFileName = outFileNamePattern.replace("#CHR#", chr);
             chrFiles.add(chrFileName);
             File chrFile = new File(chrFileName);
             if( chrFile.exists() ) {
                 msg = chrFileName+" already exists";
-                System.out.println(msg);
+                logger.info(msg);
                 dump.write(msg+"\n");
-                continue;
+                return;
             }
             //BufferedWriter out = createGZip(chrFileName);
-            BufferedWriter out = new BufferedWriter(new FileWriter(chrFileName));
+            BufferedWriter out = new BufferedWriter(new FileWriter(new File(chrFileName)));
 
             JsonFactory jf = new JsonFactory();
             JsonGenerator jsonGenerator = jf.createGenerator(out);
@@ -154,11 +159,12 @@ public class DbSnpEvaLoader {
             int variantsWritten = 0;
             for( int i=1; i<chrLen; i+=CHUNK_SIZE ) {
                 String url = urlTemplate.replace("#START#", Integer.toString(i)).replace("#STOP#", Integer.toString(i+CHUNK_SIZE-1));
+                logger.info(url);
                 fd.setExternalFile(url);
-                fd.setLocalFile("/tmp/z/" + (++fileNr) + ".json.gz");
+                fd.setLocalFile("/tmp/z/" +chr+"/"+ (++fileNr) + ".json.gz");
                 fd.setUseCompression(true);
-                String localFile = fd.downloadNew();
 
+                String localFile = fd.downloadNew();
 
 
                 BufferedReader jsonRaw = Utils.openReader(localFile);
@@ -169,14 +175,14 @@ public class DbSnpEvaLoader {
                     int numResults = ((BigDecimal) response.get("numResults")).intValueExact();
                     int numTotalResults = ((BigDecimal) response.get("numTotalResults")).intValueExact();
                     if( numResults<numTotalResults ) {
-                        System.out.println("*** serious problem: numResults<numTotalResults");
+                        logger.info("*** serious problem: numResults<numTotalResults");
                         dump.write("*** serious problem: numResults<numTotalResults\n");
                     }
 
                     Double progressInPercent = (100.0*i)/(chrLen);
                     String progress = ",  "+String.format("%.1f%%", progressInPercent);
                     msg = "  chr"+chr+":"+i+"-"+(i+CHUNK_SIZE-1)+"   variants:"+numResults+" chr total:"+variantsWritten+progress+"\n";
-                    System.out.print(msg);
+                    logger.info(msg);
                     dump.write(msg);
 
                     if( numResults==0 ) {
@@ -208,7 +214,7 @@ public class DbSnpEvaLoader {
             msg += "chr"+chr+", variants written: "+Utils.formatThousands(variantsWritten)
                     +",  total variants written: "+Utils.formatThousands(totalVariantsWritten)+"\n";
             msg += "============\n\n";
-            System.out.print(msg);
+                logger.info(msg);
             dump.write(msg);
             dump.flush();
 
@@ -219,12 +225,13 @@ public class DbSnpEvaLoader {
             out.close();
 
             // delete all temporary files
-            File dirZ = new File("/tmp/z");
+            File dirZ = new File("/tmp/z/"+chr);
+
             for( File file: dirZ.listFiles() ) {
                 if (!file.isDirectory() && file.getName().endsWith(".json.gz"))
                     file.delete();
             }
-        }
+        }catch(Exception e){e.printStackTrace();} } );
         return chrFiles;
     }
 
@@ -429,23 +436,23 @@ public class DbSnpEvaLoader {
 
         // insert remaining snps
         save(null, dump);
-        System.out.println("DAO: total rows inserted: "+rowsInserted);
+        logger.info("DAO: total rows inserted: "+rowsInserted);
         if( snpsWithoutAccession>0 ) {
-            System.out.println("### WARN: skipped snps without accession: " + snpsWithoutAccession);
+            logger.info("### WARN: skipped snps without accession: " + snpsWithoutAccession);
         }
 
         // dump unknown fields
-        System.out.println();
-        System.out.println("unknown fields: ");
+        logger.info("\n");
+        logger.info("unknown fields: ");
         for( Map.Entry<String,Integer> entry: unknownFields.entrySet() ) {
-            System.out.println("   "+entry.getKey()+" : "+entry.getValue());
+            logger.info("   "+entry.getKey()+" : "+entry.getValue());
         }
 
         // dump snp lengthd
-        System.out.println();
-        System.out.println("snp lengths distribution: ");
+        logger.info("\n");
+        logger.info("snp lengths distribution: ");
         for( Map.Entry<Integer,Integer> entry: snpLengths.entrySet() ) {
-            System.out.println("   "+entry.getKey()+" : "+entry.getValue());
+            logger.info("   "+entry.getKey()+" : "+entry.getValue());
         }
         System.exit(-1);
     }
@@ -454,7 +461,7 @@ public class DbSnpEvaLoader {
 
         if( dbSnp!=null ) {
             if( dbSnp.getSnpName()==null ) {
-                System.out.println("## no RS id for "+dbSnp.getSnpClass()+" at CHR"+dbSnp.getChromosome()+":"+dbSnp.getPosition());
+                logger.info("## no RS id for "+dbSnp.getSnpClass()+" at CHR"+dbSnp.getChromosome()+":"+dbSnp.getPosition());
                 return false;
             }
 
@@ -478,7 +485,7 @@ public class DbSnpEvaLoader {
             rowsInserted += dbSnpList.size();
             dao.insert(dbSnpList);
             dbSnpList.clear();
-            System.out.println("DAO: rows inserted "+rowsInserted);
+            logger.info("DAO: rows inserted "+rowsInserted);
         }
         return true;
     }
