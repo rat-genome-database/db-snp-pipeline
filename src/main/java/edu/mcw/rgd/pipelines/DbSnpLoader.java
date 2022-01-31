@@ -27,6 +27,7 @@ public class DbSnpLoader {
     FastaParser fastaParser = new FastaParser();
     int skippedDbSnpEntries = 0;
     int skippedDbSnpEntriesWithoutClinicalSignificance = 0;
+    private String version;
 
     /**
      * parse cmd line arguments and run the loader;
@@ -757,5 +758,13 @@ public class DbSnpLoader {
             }
             return null;
         }
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 }

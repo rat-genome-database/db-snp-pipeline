@@ -1,3 +1,6 @@
+Jan 31, 2022
+  updated ojdbc dependency
+
 v. 2.0 Dec 13, 2018
   moved from ANT to GRADLE
 
