@@ -1,20 +1,18 @@
 package edu.mcw.rgd.pipelines;
 
-import edu.mcw.rgd.datamodel.*;
 import edu.mcw.rgd.process.FastaParser;
 import edu.mcw.rgd.process.FileDownloader;
 import edu.mcw.rgd.process.Utils;
-import edu.mcw.rgd.process.mapping.MapManager;
 import nu.xom.*;
 import org.apache.commons.logging.*;
-import org.springframework.beans.factory.xml.XmlBeanFactory;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.FileSystemResource;
 import edu.mcw.rgd.xml.*;
 
 import java.io.*;
 import java.sql.ResultSet;
 import java.util.*;
-import java.util.Map;
 
 /**
  * @author mtutaj
@@ -24,13 +22,13 @@ import java.util.Map;
 public class DbSnpLoader {
 
     protected final Log logger = LogFactory.getLog("dbsnp");
-    private String version;
 
-    DbSnpDao dao = new DbSnpDao();
+    DbSnpDao dao;
     FileDownloader downloader = new FileDownloader();
     FastaParser fastaParser = new FastaParser();
     int skippedDbSnpEntries = 0;
     int skippedDbSnpEntriesWithoutClinicalSignificance = 0;
+    private String version;
 
     /**
      * parse cmd line arguments and run the loader;
@@ -41,7 +39,6 @@ public class DbSnpLoader {
 
         String dataDir = null;
         int mapKey = 0;
-        int refNucUpdate = 0;
         String build = null;
         String groupLabel = null;
         String exportFile = null;
@@ -84,63 +81,28 @@ public class DbSnpLoader {
                 case "-table":
                     dbSnpTableName = args[++argp];
                     break;
-                case "-ref_Nuc_Update":
-                    refNucUpdate = Integer.parseInt(args[++argp]);
-                    break;
-
             }
         }
 
-
+        // validate cmd line params
+        if( dataDir==null || mapKey==0 || build==null || groupLabel==null) {
+            System.out.println("Usage: java -Dspring.config={db.conf.file} -jar DbSnpLoader.jar -data_dir {data_dir_path} -map_key {map_key_value} -group_label {group_label} -build {build} [-no_dump_file] [-table db_snp_table_name]");
+            System.out.println("  for example:");
+            System.out.println("  java -Dspring.config=../properties/default_db.xml -jar DbSnpLoader.jar -data_dir ./data/dbSnp134 -map_key 17 -group_label GRCh37.p2 -build dbSnp134");
+            return;
+        }
 
         // instantiate loader class
-	    XmlBeanFactory bf=new XmlBeanFactory(new FileSystemResource("properties/AppConfigure.xml"));
+        DefaultListableBeanFactory bf= new DefaultListableBeanFactory();
+        new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new FileSystemResource("properties/AppConfigure.xml"));
         DbSnpLoader loader=(DbSnpLoader) (bf.getBean("loader"));
-
 
         // set DB_SNP table name
         if( dbSnpTableName!=null ) {
             loader.dao.setTableName(dbSnpTableName);
             System.out.println("dbSnp table used for import is: "+dbSnpTableName);
         }
-        // validate cmd line params
-        if( dataDir==null || mapKey==0 || build==null || groupLabel==null) {
-            if(mapKey != 0 && build != null && refNucUpdate == 1) {
-                java.util.Map<String, Integer> chromosomeSizes = loader.dao.getChromosomeSizes(mapKey);
-                List<String> chromosomes = new ArrayList<>(chromosomeSizes.keySet());
 
-                for(String chr: chromosomes) {
-                    try {
-                        System.out.println("Processing chromosome "+ chr);
-                        Set<DbSnp> result = loader.dao.getDbSnp(build, mapKey, chr);
-                        List<DbSnp> out = new ArrayList<>();
-                        int count = 0;
-                        for (DbSnp dbSnp : result) {
-                            count++;
-                            String refNuc = loader.getRefNucleotide(dbSnp.getChromosome(), dbSnp.getPosition(), dbSnp.getMapKey());
-                            dbSnp.setRefAllele(refNuc);
-                            out.add(dbSnp);
-                            if(count%100000 == 0 ) {
-                                loader.dao.updateDbSnp(out, build);
-                                out = new ArrayList<>();
-                                System.out.println("Update complete for " + count);
-                            }
-                        }
-                        loader.dao.updateDbSnp(out,build);
-                        loader.dao.delete(build, chr, mapKey);
-                    }catch (Exception e){
-                        e.printStackTrace();
-                    }
-                }
-            }else {
-                System.out.println("Usage: java -Dspring.config={db.conf.file} -jar DbSnpLoader.jar -data_dir {data_dir_path} -map_key {map_key_value} -group_label {group_label} -build {build} [-no_dump_file] [-table db_snp_table_name]");
-                System.out.println("  for example:");
-                System.out.println("  java -Dspring.config=../properties/default_db.xml -jar DbSnpLoader.jar -data_dir ./data/dbSnp134 -map_key 17 -group_label GRCh37.p2 -build dbSnp134");
-            }
-
-
-            return;
-        }
         String result;
         if( exportFile!=null ) {
             result = loader.exportData(build, mapKey, exportFile);
@@ -155,15 +117,7 @@ public class DbSnpLoader {
         else {
             String dumpFile = noDumpFile ? null : "data/load.log";
             result = "OK";
-
-            MapManager mm = MapManager.getInstance();
-            edu.mcw.rgd.datamodel.Map map = mm.getMap(mapKey);
-            if( map.getSpeciesTypeKey()!=SpeciesType.HUMAN ) {
-                DbSnpEvaLoader evaLoader=(DbSnpEvaLoader) (bf.getBean("evaLoader"));
-                evaLoader.run(dataDir, build, mapKey, groupLabel, dumpFile);
-            } else {
-                loader.run(dataDir, build, mapKey, groupLabel, dumpFile, withClinicalSignificance);
-            }
+            loader.run(dataDir, build, mapKey, groupLabel, dumpFile, withClinicalSignificance);
         }
         System.out.println(result);
     }
@@ -415,6 +369,7 @@ public class DbSnpLoader {
         String genomeBuild;
         String rsId;
         String snpClass; // "snp", ...
+        String snpType; // "notwithdrawn", ...
         String molType; // "genomic", ...
         String genotype; // "true", ...
         Double het;  // avg heterozygosity score
@@ -551,10 +506,12 @@ public class DbSnpLoader {
             dbSnp.setSource(source);
             dbSnp.setStdError(stdErr);
             dbSnp.setAllele(allele);
+            dbSnp.setOrientation(1);
             dbSnp.setMafFrequency(mafFreq);
             dbSnp.setMafSampleSize(mafSampleSize);
             dbSnp.setMafAllele(mafAllele);
             dbSnp.setSnpClass(snpClass);
+            dbSnp.setSnpType(snpType);
             dbSnp.setMolType(molType);
             dbSnp.setGenotype(genotype);
             dbSnp.setHetroType(hetType);
@@ -578,11 +535,13 @@ public class DbSnpLoader {
                         het + '\t' +
                         stdErr + '\t' +
                         snpClass + '\t' +
+                        snpType + '\t' +
                         molType + '\t' +
                         genotype + '\t' +
                         dbSnpBuild + '\t' +
                         genomeBuild + '\t' +
                         allele + '\t' +
+                        1 + '\t' +
                         mafFreq + '\t' +
                         mafSampleSize + '\t' +
                         mafAllele + '\t' +
@@ -616,6 +575,7 @@ public class DbSnpLoader {
                 }
 
                 snpClass = element.getAttributeValue("snpClass");
+                snpType = element.getAttributeValue("snpType");
                 molType = element.getAttributeValue("molType");
                 genotype = element.getAttributeValue("genotype");
 

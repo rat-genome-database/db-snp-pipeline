@@ -1,8 +1,8 @@
-Mar 23, 2020
-  EVA Parser: updated code to download all variants for rat Rnor6
+Feb 26, 2024
+  updated to java 17
 
-v. 2.1 Dec 14, 2018
-  EVA Parser: implemented code to download all variants for rat into one huge json file
+Jan 31, 2022
+  updated ojdbc dependency
 
 v. 2.0 Dec 13, 2018
   moved from ANT to GRADLE

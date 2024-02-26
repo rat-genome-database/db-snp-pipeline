@@ -9,46 +9,48 @@ tasks.whenTaskAdded { task ->
 apply plugin: 'java'
 apply plugin: 'application'
 
-// JDK 8
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 mainClassName = 'edu.mcw.rgd.pipelines.DbSnpLoader'
 String myAppName = 'DbSnpLoad'
+
+project.archivesBaseName = myAppName
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile 'commons-dbcp:commons-dbcp:1.4'
-    compile 'commons-net:commons-net:3.6'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
-    compile 'com.github.cliftonlabs:json-simple:3.0.2'
-    compile 'log4j:log4j:1.2.17'
-    compile 'org.apache.httpcomponents:httpclient:4.5.7'
-    compile 'org.springframework:spring-beans:5.1.5.RELEASE'
-    compile 'org.springframework:spring-jdbc:5.1.5.RELEASE'
-    compile 'com.io7m.xom:xom:1.2.10'
+    implementation ('org.apache.commons:commons-dbcp2:2.11.0') {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+    implementation 'commons-net:commons-net:3.10.0'
+    implementation 'log4j:log4j:1.2.17'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    implementation 'com.oracle.database.jdbc:ojdbc10:19.22.0.0'
+    implementation 'org.springframework:spring-jdbc:6.1.4'
+    implementation 'com.io7m.xom:xom:1.2.10'
 
-    compile fileTree(dir: 'lib', include: '*.jar')
+    implementation fileTree(dir: 'lib', include: '*.jar')
 }
 
 jar {
-    baseName = myAppName
     manifest {
         attributes(
-            'Built-By': System.getProperty('user.name'),
-            'Built-Date': new Date(),
-            'Built-JDK': System.getProperty('java.version'),
-            'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
-            'Main-Class': mainClassName
+                'Built-By': System.getProperty('user.name'),
+                'Built-Date': new Date(),
+                'Built-JDK': System.getProperty('java.version'),
+                'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' '),
+                'Main-Class': mainClassName
         )
     }
 }
 
 distributions {
     main {
-        baseName = myAppName
+        distributionBaseName = myAppName
     }
 }
 
