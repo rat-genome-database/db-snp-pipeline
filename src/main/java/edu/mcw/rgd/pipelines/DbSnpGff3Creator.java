@@ -3,7 +3,8 @@ package edu.mcw.rgd.pipelines;
 import edu.mcw.rgd.xml.XomAnalyzer;
 import nu.xom.Element;
 import nu.xom.Elements;
-import org.springframework.beans.factory.xml.XmlBeanFactory;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.FileSystemResource;
 
 import java.io.File;
@@ -33,8 +34,9 @@ public class DbSnpGff3Creator {
 
     static public void main(String[] args) throws Exception{
 
-        XmlBeanFactory bf=new XmlBeanFactory(new FileSystemResource("properties/AppConfigure.xml"));
-        DbSnpGff3Creator instance = (DbSnpGff3Creator) (bf.getBean("gff3Creator"));
+        DefaultListableBeanFactory bf= new DefaultListableBeanFactory();
+        new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new FileSystemResource("properties/AppConfigure.xml"));
+        DbSnpGff3Creator instance=(DbSnpGff3Creator) (bf.getBean("gff3Creator"));
 
         // do NOT generate gff3 files for Celera
         boolean generateCeleraFiles = false;

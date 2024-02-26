@@ -506,12 +506,12 @@ public class DbSnpLoader {
             dbSnp.setSource(source);
             dbSnp.setStdError(stdErr);
             dbSnp.setAllele(allele);
-            dbSnp.setOrientation(1);
+            //dbSnp.setOrientation(1);
             dbSnp.setMafFrequency(mafFreq);
             dbSnp.setMafSampleSize(mafSampleSize);
             dbSnp.setMafAllele(mafAllele);
             dbSnp.setSnpClass(snpClass);
-            dbSnp.setSnpType(snpType);
+            //dbSnp.setSnpType(snpType);
             dbSnp.setMolType(molType);
             dbSnp.setGenotype(genotype);
             dbSnp.setHetroType(hetType);
