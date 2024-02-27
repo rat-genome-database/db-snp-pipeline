@@ -3,6 +3,7 @@ package edu.mcw.rgd.pipelines;
 import edu.mcw.rgd.dao.AbstractDAO;
 import edu.mcw.rgd.dao.DataSourceFactory;
 import edu.mcw.rgd.dao.impl.MapDAO;
+import edu.mcw.rgd.datamodel.Chromosome;
 import edu.mcw.rgd.process.Utils;
 import org.springframework.jdbc.object.BatchSqlUpdate;
 
@@ -18,7 +19,6 @@ import java.util.*;
  */
 public class DbSnpDao extends AbstractDAO {
 
-    private String tableName = "DB_SNP";
     private int batchSize;
 
     static long dbSnpCount = 0;
@@ -90,21 +90,22 @@ public class DbSnpDao extends AbstractDAO {
      */
     public int insertDbSnps(List<DbSnp> dbSnps) throws Exception {
 
-        BatchSqlUpdate su = new BatchSqlUpdate(this.getDataSource(),
-            "INSERT INTO "+tableName+" (chromosome, position, avg_hetro_score, std_error, "+
-                    "snp_name, source, map_key, allele, "+
-                    "maf_frequency, maf_sample_size, het_type, "+
-                    "snp_class, mol_type, genotype, "+
-                    "map_loc_count, function_class, maf_allele, ancestral_allele, "+
-                    "clinical_significance, ref_allele, db_snp_id) "+
-                    "SELECT ?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?,?,?, ?,?,DB_SNP_SEQ.NEXTVAL FROM dual "+
-                    "WHERE NOT EXISTS(SELECT 1 FROM "+tableName+" WHERE chromosome=? AND position=? AND snp_name=? "+
-                "AND source=? AND map_key=? AND allele=?)",
+        BatchSqlUpdate su = new BatchSqlUpdate(this.getDataSource(), """
+            INSERT INTO DB_SNP (chromosome, position, avg_hetro_score, std_error,
+            snp_name, source, map_key, allele,
+            maf_frequency, maf_sample_size, het_type,
+            snp_class, mol_type, genotype,
+            map_loc_count, function_class, maf_allele,
+            clinical_significance, ref_allele, db_snp_id)
+            SELECT ?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,DB_SNP_SEQ.NEXTVAL FROM dual
+            WHERE NOT EXISTS(SELECT 1 FROM DB_SNP WHERE chromosome=? AND position=? AND snp_name=?
+            AND source=? AND map_key=? AND allele=?)
+           """,
             new int[] {Types.VARCHAR, Types.INTEGER, Types.DOUBLE, Types.DOUBLE,
                     Types.VARCHAR, Types.VARCHAR, Types.INTEGER, Types.VARCHAR,
                     Types.DOUBLE, Types.INTEGER, Types.VARCHAR,
                     Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
-                    Types.INTEGER, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
+                    Types.INTEGER, Types.VARCHAR, Types.VARCHAR,
                     Types.VARCHAR, Types.VARCHAR,
                     Types.VARCHAR, Types.INTEGER, Types.VARCHAR,
                     Types.VARCHAR, Types.INTEGER, Types.VARCHAR
@@ -118,7 +119,7 @@ public class DbSnpDao extends AbstractDAO {
                     snp.getSnpName(), snp.getSource(), snp.getMapKey(), snp.getAllele(),
                     snp.getMafFrequency(), snp.getMafSampleSize(), snp.getHetroType(),
                     snp.getSnpClass(), snp.getMolType(), snp.getGenotype(),
-                    snp.getMapLocCount(), snp.getFunctionClass(), snp.getMafAllele(), snp.getAncestralAllele(),
+                    snp.getMapLocCount(), snp.getFunctionClass(), snp.getMafAllele(),
                     snp.getClinicalSignificance(), snp.getRefAllele(),
                     snp.getChromosome(), snp.getPosition(), snp.getSnpName(),
                     snp.getSource(), snp.getMapKey(), snp.getAllele());
@@ -196,7 +197,7 @@ public class DbSnpDao extends AbstractDAO {
     public int updateMafAllele(List<DbSnp> dbSnps) throws Exception {
 
         BatchSqlUpdate su = new BatchSqlUpdate(this.getDataSource(),
-            "UPDATE "+tableName+" SET maf_allele=? WHERE map_key=? AND source=? AND snp_name=? AND chromosome=? AND position=? ",
+            "UPDATE DB_SNP SET maf_allele=? WHERE map_key=? AND source=? AND snp_name=? AND chromosome=? AND position=? ",
             new int[] {Types.VARCHAR, Types.INTEGER, Types.VARCHAR,
                     Types.VARCHAR, Types.VARCHAR, Types.INTEGER
             }
@@ -217,7 +218,7 @@ public class DbSnpDao extends AbstractDAO {
 
     public ResultSet getDataSet(String source, int mapKey) throws Exception {
 
-        String sql = "SELECT chromosome, position, snp_name FROM "+tableName+" WHERE source=? AND map_key=?";
+        String sql = "SELECT chromosome, position, snp_name FROM DB_SNP WHERE source=? AND map_key=?";
         Connection conn = null;
         try {
             conn = this.getConnection();
@@ -236,7 +237,7 @@ public class DbSnpDao extends AbstractDAO {
 
     public Set<DbSnp> getDbSnp(String source, int mapKey,String chromosome) throws Exception {
 
-        String sql = "SELECT * FROM "+tableName+" WHERE source=? AND map_key=? and chromosome = ? and ref_allele is null";
+        String sql = "SELECT * FROM DB_SNP WHERE source=? AND map_key=? and chromosome = ? and ref_allele is null";
         Connection conn = null;
         try {
             conn = this.getConnection();
@@ -279,7 +280,7 @@ public class DbSnpDao extends AbstractDAO {
     public int updateDbSnp(List<DbSnp> dbSnp,String source) throws Exception {
 
         BatchSqlUpdate su = new BatchSqlUpdate(this.getDataSource(),
-                "UPDATE "+tableName+" SET ref_allele = ? WHERE source=? AND map_key=? AND snp_name=? and chromosome = ? and position = ?",
+                "UPDATE DB_SNP SET ref_allele = ? WHERE source=? AND map_key=? AND snp_name=? and chromosome = ? and position = ?",
                 new int[] {Types.VARCHAR, Types.VARCHAR, Types.INTEGER,
                         Types.VARCHAR, Types.VARCHAR, Types.INTEGER
                 }
@@ -301,7 +302,7 @@ public class DbSnpDao extends AbstractDAO {
     public void delete(String source, String chromosome, int mapKey) throws Exception {
 
 
-        String sql = "Delete from "+tableName+" where ref_allele = allele and map_key = ? and source = ? and chromosome = ?";
+        String sql = "Delete from DB_SNP where ref_allele = allele and map_key = ? and source = ? and chromosome = ?";
 
         Connection conn = null;
         try {
@@ -332,9 +333,9 @@ public class DbSnpDao extends AbstractDAO {
         String sql1 = "SELECT avg_hetro_score, std_error, allele, "+
                 "orientation, maf_frequency, maf_sample_size, maf_allele, het_type, "+
                 "snp_class, snp_type, mol_type, genotype, "+
-                "map_loc_count, function_class, snp_name FROM "+tableName+" WHERE source=? AND map_key=?";
+                "map_loc_count, function_class, snp_name FROM DB_SNP WHERE source=? AND map_key=?";
 
-        String sql2 = "UPDATE "+tableName+" SET avg_hetro_score=?, std_error=?, allele=?, "+
+        String sql2 = "UPDATE DB_SNP SET avg_hetro_score=?, std_error=?, allele=?, "+
                 "orientation=?, maf_frequency=?, maf_sample_size=?, maf_allele=?, het_type=?, "+
                 "snp_class=?, snp_type=?, mol_type=?, genotype=?, "+
                 "map_loc_count=?, function_class=? WHERE source=? AND map_key=? AND snp_name=?";
@@ -393,14 +394,6 @@ public class DbSnpDao extends AbstractDAO {
         }
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
     public void setBatchSize(int batchSize) {
         this.batchSize = batchSize;
     }
@@ -413,4 +406,15 @@ public class DbSnpDao extends AbstractDAO {
         MapDAO dao = new MapDAO();
         return dao.getChromosomeSizes(mapKey);
     }
+
+    public java.util.Map<String,String> getRefSeqToChrMap(int mapKey) throws Exception {
+        MapDAO dao = new MapDAO();
+        java.util.Map<String,String> map = new HashMap<>();
+        List<Chromosome> chromosomes = dao.getChromosomes(mapKey);
+        for( Chromosome c: chromosomes ) {
+            map.put(c.getRefseqId(), c.getChromosome());
+        }
+        return map;
+    }
+
 }

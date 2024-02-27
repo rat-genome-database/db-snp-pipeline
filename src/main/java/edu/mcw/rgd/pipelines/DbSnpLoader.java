@@ -1,5 +1,6 @@
 package edu.mcw.rgd.pipelines;
 
+import edu.mcw.rgd.dao.DataSourceFactory;
 import edu.mcw.rgd.process.FastaParser;
 import edu.mcw.rgd.process.FileDownloader;
 import edu.mcw.rgd.process.Utils;
@@ -11,6 +12,8 @@ import org.springframework.core.io.FileSystemResource;
 import edu.mcw.rgd.xml.*;
 
 import java.io.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.*;
 
@@ -43,10 +46,11 @@ public class DbSnpLoader {
         String groupLabel = null;
         String exportFile = null;
         String importFile = null;
-        String dbSnpTableName = "DB_SNP";
         boolean upConvert = false;
         boolean noDumpFile = false;
         boolean withClinicalSignificance = false;
+        boolean delete = false;
+        boolean vcf = false;
 
         // parse cmd line for args
         for( int argp=0; argp<args.length; argp++ ) {
@@ -78,17 +82,17 @@ public class DbSnpLoader {
                 case "-with_clinical_significance":
                     withClinicalSignificance = true;
                     break;
-                case "-table":
-                    dbSnpTableName = args[++argp];
+                case "-delete":
+                    delete = true;
+                    break;
+                case "-vcf":
+                    vcf = true;
                     break;
             }
         }
 
-        // validate cmd line params
-        if( dataDir==null || mapKey==0 || build==null || groupLabel==null) {
-            System.out.println("Usage: java -Dspring.config={db.conf.file} -jar DbSnpLoader.jar -data_dir {data_dir_path} -map_key {map_key_value} -group_label {group_label} -build {build} [-no_dump_file] [-table db_snp_table_name]");
-            System.out.println("  for example:");
-            System.out.println("  java -Dspring.config=../properties/default_db.xml -jar DbSnpLoader.jar -data_dir ./data/dbSnp134 -map_key 17 -group_label GRCh37.p2 -build dbSnp134");
+        if( delete ) {
+            delete(build, mapKey);
             return;
         }
 
@@ -97,10 +101,22 @@ public class DbSnpLoader {
         new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new FileSystemResource("properties/AppConfigure.xml"));
         DbSnpLoader loader=(DbSnpLoader) (bf.getBean("loader"));
 
-        // set DB_SNP table name
-        if( dbSnpTableName!=null ) {
-            loader.dao.setTableName(dbSnpTableName);
-            System.out.println("dbSnp table used for import is: "+dbSnpTableName);
+        if( vcf ) {
+            VcfLoader vcfLoader = new VcfLoader();
+            try {
+                vcfLoader.run(importFile, build, mapKey, loader);
+            } catch( Exception e ) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
+        // validate cmd line params
+        if( dataDir==null || mapKey==0 || build==null || groupLabel==null) {
+            System.out.println("Usage: java -Dspring.config={db.conf.file} -jar DbSnpLoader.jar -data_dir {data_dir_path} -map_key {map_key_value} -group_label {group_label} -build {build} [-no_dump_file] [-table db_snp_table_name]");
+            System.out.println("  for example:");
+            System.out.println("  java -Dspring.config=../properties/default_db.xml -jar DbSnpLoader.jar -data_dir ./data/dbSnp134 -map_key 17 -group_label GRCh37.p2 -build dbSnp134");
+            return;
         }
 
         String result;
@@ -112,6 +128,10 @@ public class DbSnpLoader {
         }
         else if( upConvert ) {
             loader.dao.upConvert(build, 17, 13);
+            result = "OK";
+        }
+        else if( delete ) {
+            delete(build, mapKey);
             result = "OK";
         }
         else {
@@ -147,7 +167,7 @@ public class DbSnpLoader {
 
     static List<DbSnp> dbSnpList = new ArrayList<>(100000);
     static int rowsInserted = 0;
-    private void insertToDb(DbSnp dbSnp) throws Exception {
+    void insertToDb(DbSnp dbSnp) throws Exception {
         if( dbSnp!=null )
             dbSnpList.add(dbSnp);
         if( dbSnp==null || dbSnpList.size()>=100000 ) {
@@ -758,6 +778,63 @@ public class DbSnpLoader {
             }
             return null;
         }
+    }
+
+    static void delete( String build, int mapKey ) throws Exception {
+
+        int deleted = 0;
+        do {
+            deleted = delete( build, mapKey, 1000000 );
+            if( deleted>0 ) {
+                System.out.println("ROWS DELETED "+deleted);
+            }
+        } while( deleted > 0 );
+    }
+
+    static int delete( String build, int mapKey, int maxRowsToDelete ) throws Exception {
+
+        Connection conn = DataSourceFactory.getInstance().getDataSource("DbSnp").getConnection();
+
+        List<Long> dbSnpIds = new ArrayList<>(maxRowsToDelete);
+        String sql = "SELECT DB_SNP_ID from DB_SNP where SOURCE=? AND map_key=?";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, build);
+        ps.setInt(2, mapKey);
+        ResultSet rs = ps.executeQuery();
+        int u = 0;
+        while( rs.next() ) {
+            dbSnpIds.add( rs.getLong(1) );
+            if( ++u == maxRowsToDelete ) {
+                break;
+            }
+        }
+        rs.close();
+        ps.close();
+        System.out.println("   dbSnpIds loaded: "+dbSnpIds.size());
+
+        int BATCH_SIZE = 1000;
+        System.out.println("   batch size: "+BATCH_SIZE);
+
+        conn.setAutoCommit(false);
+        String sql2 = "DELETE FROM DB_SNP where db_snp_id=?";
+        ps = conn.prepareStatement(sql2);
+        for( int i=0; i<dbSnpIds.size(); i++ ) {
+
+            long dbSbpId = dbSnpIds.get(i);
+            ps.setLong(1, dbSbpId);
+            int rowsAffected = ps.executeUpdate();
+
+            if( i>0 && (i%BATCH_SIZE)==0 ) {
+                conn.commit();
+                System.out.println("   "+i);
+            }
+        }
+        conn.commit();
+        System.out.println("   "+dbSnpIds.size());
+
+        conn.close();
+
+        return u;
     }
 
     public String getVersion() {
