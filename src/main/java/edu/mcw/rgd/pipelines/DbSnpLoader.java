@@ -5,7 +5,7 @@ import edu.mcw.rgd.process.FastaParser;
 import edu.mcw.rgd.process.FileDownloader;
 import edu.mcw.rgd.process.Utils;
 import nu.xom.*;
-import org.apache.commons.logging.*;
+//import org.apache.commons.logging.*;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.FileSystemResource;
@@ -24,7 +24,7 @@ import java.util.*;
  */
 public class DbSnpLoader {
 
-    protected final Log logger = LogFactory.getLog("dbsnp");
+    //protected final Log logger = LogFactory.getLog("dbsnp");
 
     DbSnpDao dao;
     FileDownloader downloader = new FileDownloader();
@@ -215,7 +215,7 @@ public class DbSnpLoader {
      */
     public String run(String dir, String source, int mapKey, String groupLabel, String dumpFileName, boolean withClinicalSignificance) throws Exception {
 
-        logger.info("Processing dir " + dir + " for source " + source + " and mapKey=" + mapKey + ", groupLabel="+groupLabel);
+        //logger.info("Processing dir " + dir + " for source " + source + " and mapKey=" + mapKey + ", groupLabel="+groupLabel);
 
         long timestamp = System.currentTimeMillis();
 
@@ -260,14 +260,14 @@ public class DbSnpLoader {
                     System.out.println("==================\n");
                 }
                 else {
-                    logger.info("!!! Skipping file "+file.getAbsolutePath());
+                    //logger.info("!!! Skipping file "+file.getAbsolutePath());
                 }
             }
         }
 
         long minutes = (System.currentTimeMillis()-timestamp)/(60*1000);
-        logger.info("DONE! "+minutes+" minutes");
-        logger.info("Done processing directory "+dir+" for source "+source+ " and mapKey="+mapKey);
+        //logger.info("DONE! "+minutes+" minutes");
+        //logger.info("Done processing directory "+dir+" for source "+source+ " and mapKey="+mapKey);
 
         if( dumpDataWriter!=null )
             dumpDataWriter.close();
@@ -683,7 +683,7 @@ public class DbSnpLoader {
                             String strand = component.getAttributeValue("orientation");
                             if (!strand.equals("fwd")) {
                                 int contigEnd = Integer.parseInt(component.getAttributeValue("end"));
-                                logger.info("contig " + contigStart + "-" + contigEnd);
+                                //logger.info("contig " + contigStart + "-" + contigEnd);
                             }
                             contigOrient = strand;
 
@@ -696,7 +696,7 @@ public class DbSnpLoader {
                                     continue;
                                 mapLocCount++;
                                 if (mapLocCount > 1) {
-                                    logger.info("fatal: multiple MapLocs");
+                                    //logger.info("fatal: multiple MapLocs");
                                 }
 
                                 mapLocOrient.add(mapLoc.getAttributeValue("orient"));
@@ -705,7 +705,7 @@ public class DbSnpLoader {
                                 int asnFrom = Integer.parseInt(mapLoc.getAttributeValue("asnFrom"));
                                 int asnTo = Integer.parseInt(mapLoc.getAttributeValue("asnTo"));
                                 if (asnFrom > asnTo) {
-                                    logger.error("fatal: asnFrom > asnTo");
+                                    //logger.error("fatal: asnFrom > asnTo");
                                 }
                                 posList.add(contigStart + asnFrom + 1);
 
