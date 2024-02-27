@@ -6,7 +6,6 @@
 	</bean>
 	
     <bean id="dao" class="edu.mcw.rgd.pipelines.DbSnpDao">
-        <property name="tableName" value="DB_SNP" />
         <property name="batchSize" value="5000" />
     </bean>
 

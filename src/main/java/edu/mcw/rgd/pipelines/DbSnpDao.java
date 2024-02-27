@@ -95,9 +95,9 @@ public class DbSnpDao extends AbstractDAO {
             snp_name, source, map_key, allele,
             maf_frequency, maf_sample_size, het_type,
             snp_class, mol_type, genotype,
-            map_loc_count, function_class, maf_allele,
+            map_loc_count, maf_allele,
             clinical_significance, ref_allele, db_snp_id)
-            SELECT ?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?,?, ?,?,DB_SNP_SEQ.NEXTVAL FROM dual
+            SELECT ?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?, ?,?, ?,?,DB_SNP_SEQ.NEXTVAL FROM dual
             WHERE NOT EXISTS(SELECT 1 FROM DB_SNP WHERE chromosome=? AND position=? AND snp_name=?
             AND source=? AND map_key=? AND allele=?)
            """,
@@ -105,7 +105,7 @@ public class DbSnpDao extends AbstractDAO {
                     Types.VARCHAR, Types.VARCHAR, Types.INTEGER, Types.VARCHAR,
                     Types.DOUBLE, Types.INTEGER, Types.VARCHAR,
                     Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
-                    Types.INTEGER, Types.VARCHAR, Types.VARCHAR,
+                    Types.INTEGER, Types.VARCHAR,
                     Types.VARCHAR, Types.VARCHAR,
                     Types.VARCHAR, Types.INTEGER, Types.VARCHAR,
                     Types.VARCHAR, Types.INTEGER, Types.VARCHAR
@@ -119,7 +119,7 @@ public class DbSnpDao extends AbstractDAO {
                     snp.getSnpName(), snp.getSource(), snp.getMapKey(), snp.getAllele(),
                     snp.getMafFrequency(), snp.getMafSampleSize(), snp.getHetroType(),
                     snp.getSnpClass(), snp.getMolType(), snp.getGenotype(),
-                    snp.getMapLocCount(), snp.getFunctionClass(), snp.getMafAllele(),
+                    snp.getMapLocCount(), snp.getMafAllele(),
                     snp.getClinicalSignificance(), snp.getRefAllele(),
                     snp.getChromosome(), snp.getPosition(), snp.getSnpName(),
                     snp.getSource(), snp.getMapKey(), snp.getAllele());
