@@ -7,6 +7,8 @@ import java.util.HashMap;
 
 public class VcfLoader {
 
+    String[] processedVarTypes = { "INDEL", "DEL", "INS", "MNV" }; // skipped "SNV"
+
     DbSnpDao dao = new DbSnpDao();
 
     public void run( String inputFile, String build, int mapKey, DbSnpLoader loader ) throws Exception {
@@ -15,6 +17,7 @@ public class VcfLoader {
 
         java.util.Map<String,String> refSeqToChrMap = dao.getRefSeqToChrMap(mapKey);
         java.util.Map<String,Integer> varTypeMap = new HashMap<>();
+        java.util.Map<String,Integer> unknownChrMap = new HashMap<>();
 
         String line;
         while( (line=in.readLine())!=null ) {
@@ -32,7 +35,15 @@ public class VcfLoader {
             String refseqChr = cols[0];
             String chr = refSeqToChrMap.get(refseqChr);
             if( chr == null ) {
-                System.out.println("*** unknown RefSeq chromosome "+refseqChr);
+                Integer cnt = unknownChrMap.get(refseqChr);
+                if( cnt == null ) {
+                    cnt = 1;
+                } else {
+                    cnt++;
+                }
+                unknownChrMap.put(refseqChr, cnt);
+
+                continue;
             }
 
             int pos = Integer.parseInt(cols[1]);
@@ -44,6 +55,16 @@ public class VcfLoader {
             String varType = parseVarType(info, varTypeMap);
             if( varType == null ) {
                 System.out.println(" null varType");
+            }
+            boolean varTypeIsOK = false;
+            for( String processedVarType: processedVarTypes ) {
+                if( processedVarType.equals(varType) ) {
+                    varTypeIsOK = true;
+                    break;
+                }
+            }
+            if( !varTypeIsOK ) {
+                continue;
             }
 
             String[] allele = alleles.split(",");
@@ -70,6 +91,12 @@ public class VcfLoader {
 
         // dump variant frequency map
         for( java.util.Map.Entry<String, Integer> entry: varTypeMap.entrySet() ) {
+            System.out.println("  "+entry.getKey()+":  "+entry.getValue());
+        }
+
+        System.out.println("=====\nChromosomes skipped:");
+
+        for( java.util.Map.Entry<String, Integer> entry: unknownChrMap.entrySet() ) {
             System.out.println("  "+entry.getKey()+":  "+entry.getValue());
         }
     }
