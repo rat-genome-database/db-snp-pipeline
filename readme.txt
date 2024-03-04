@@ -1,3 +1,6 @@
+Mar 04, 2024
+  vcf loader: implemented
+
 Feb 26, 2024
   updated to java 17
 

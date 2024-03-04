@@ -7,8 +7,6 @@ import java.util.HashMap;
 
 public class VcfLoader {
 
-    boolean loadOnlySnvs = true;
-
     DbSnpDao dao = new DbSnpDao();
 
     public void run( String inputFile, String build, int mapKey, DbSnpLoader loader ) throws Exception {
@@ -46,9 +44,6 @@ public class VcfLoader {
             String varType = parseVarType(info, varTypeMap);
             if( varType == null ) {
                 System.out.println(" null varType");
-            }
-            if( loadOnlySnvs && !varType.equals("SNV") ) {
-                continue;
             }
 
             String[] allele = alleles.split(",");
