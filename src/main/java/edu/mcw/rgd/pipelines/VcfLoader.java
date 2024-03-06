@@ -19,6 +19,8 @@ public class VcfLoader {
         java.util.Map<String,Integer> varTypeMap = new HashMap<>();
         java.util.Map<String,Integer> unknownChrMap = new HashMap<>();
 
+        int allelesTooLarge = 0;
+
         String line;
         while( (line=in.readLine())!=null ) {
 
@@ -71,6 +73,11 @@ public class VcfLoader {
 
             for( String alleleNuc: allele ) {
 
+                if( alleleNuc.length()>4000 ) {
+                    allelesTooLarge++;
+                    System.out.println("### allele too large (4000 limit exceeded): "+rsId);
+                    continue;
+                }
                 DbSnp rec = new DbSnp();
                 rec.setAllele(alleleNuc);
                 rec.setChromosome(chr);
@@ -99,6 +106,8 @@ public class VcfLoader {
         for( java.util.Map.Entry<String, Integer> entry: unknownChrMap.entrySet() ) {
             System.out.println("  "+entry.getKey()+":  "+entry.getValue());
         }
+
+        System.out.println("alleles skipped (exceeding 4000 length): "+allelesTooLarge);
     }
 
     String parseVarType( String info, java.util.Map<String,Integer> freqMap ) {
