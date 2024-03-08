@@ -1,3 +1,6 @@
+Mar 08, 2024
+  vcf loader: alleles longer than 4000 are skipped from processing
+
 Mar 04, 2024
   vcf loader: implemented
 

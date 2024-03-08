@@ -7,7 +7,9 @@ import java.util.HashMap;
 
 public class VcfLoader {
 
-    String[] processedVarTypes = { "INDEL", "DEL", "INS", "MNV" }; // skipped "SNV"
+    //String[] processedVarTypes = { "INDEL", "DEL", "INS", "MNV" }; // skipped "SNV"
+    // if NULL all variant types are processed
+    String[] processedVarTypes = null;
 
     DbSnpDao dao = new DbSnpDao();
 
@@ -58,13 +60,19 @@ public class VcfLoader {
             if( varType == null ) {
                 System.out.println(" null varType");
             }
+
             boolean varTypeIsOK = false;
-            for( String processedVarType: processedVarTypes ) {
-                if( processedVarType.equals(varType) ) {
-                    varTypeIsOK = true;
-                    break;
+            if( processedVarTypes==null ) {
+                varTypeIsOK = true;
+            } else {
+                for (String processedVarType : processedVarTypes) {
+                    if (processedVarType.equals(varType)) {
+                        varTypeIsOK = true;
+                        break;
+                    }
                 }
             }
+
             if( !varTypeIsOK ) {
                 continue;
             }
